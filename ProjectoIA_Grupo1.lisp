@@ -1,4 +1,4 @@
-(load "exemplos.fas")
+;(load "exemplos.fas")
 
 ;;estrutura que define o tipo restricao
 (defstruct (restricao)
@@ -103,5 +103,21 @@
 (defun psr-completo-p (p)  
 	(null (psr-variaveis-nao-atribuidas p)) 
 )
+
+(defun psr-consistente-p (p)  ;logico inteiro
+	(let ((atrib (psr-atribuicoes p)) (i 0) (lista-restr (psr-lista-restricoes p)))
+		(dotimes (x (length lista-restr) i)
+			(incf i)
+			(if (not (funcall (restricao-funcao-validacao (nth x lista-restr)) p))
+				(return NIL)
+
+			)
+		)
+	(block result (values T i))
+	;(return-from result ))
+	)
+)
+
+
 ;(load "ProjectoIA_Grupo1.lisp")
-; (setf p1 (cria-psr '(A B C X Y Z) '('(0 1) '(2 3) '(4 5) '(6 7) '(8 9) '(1 4)) NIL))
+;(setf p1 (cria-psr '(A B C X Y Z) '('(0 1) '(2 3) '(4 5) '(6 7) '(8 9) '(1 4)) NIL))

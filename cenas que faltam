@@ -1,0 +1,9 @@
+
+
+psr-consistente-p: PSR  lógico, inteiro
+
+psr-variavel-consistente-p: PSR x variável  lógico, inteiro
+
+psr-atribuicao-consistente-p: PSR x variável x valor  lógico, inteiro
+
+psr-atribuicoes-consistentes-arco-p: PSR x variável x valor x variável x valor  lógico, inteiro

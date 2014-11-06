@@ -1,5 +1,4 @@
-
-
+(load "exemplos.fas")
 
 ;;estrutura que define o tipo restricao
 (defstruct (restricao)
@@ -101,5 +100,8 @@
 	(setf (nth i (psr-lista-dominios p)) dom))
 )	
 
-
+(defun psr-completo-p (p)  
+	(null (psr-variaveis-nao-atribuidas p)) 
+)
+;(load "ProjectoIA_Grupo1.lisp")
 ; (setf p1 (cria-psr '(A B C X Y Z) '('(0 1) '(2 3) '(4 5) '(6 7) '(8 9) '(1 4)) NIL))

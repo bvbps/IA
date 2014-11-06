@@ -17,9 +17,10 @@
 
 
 (defstruct (psr (:constructor cria-psr))
-		(lista-variaveis :type list)
-		(lista-dominios :type list)
-		(lista-restricoes :type list)		
+		lista-variaveis
+		lista-dominios 
+		lista-restricoes 
+		lista-vars-atribuicoes		
 		atribuicoes ;;Recebe um PSR, retorna a lista de atribuicoes
 		variaveis-todas
 		variaveis-nao-atribuidas
@@ -36,18 +37,20 @@
 		atribuicoes-consistentes-arco-p
 )
 
+; devolve a lista de todas as atribuicoes.
 (defun atribuicoes1 (p) 
-		(mapcar #'cons 
-			(psr-lista-variaveis p) (car(psr-lista-dominios p))
-			
-		)			
+		(lista-vars-atribuicoes p)		
 )
 
+; devolve a lista de todas as variaveis
 (defun variaveis-todas1 (p) 
-		(lista-variaveis p)
+		(psr-lista-variaveis p)
 )
 
+; devolve a lista de todas as variaveis nao atribuidas
 (defun variaveis-nao-atribuidas (p)
+	(setf vars-atribuidas (mapcar #'Car (lista-atribucoes p))
+		
 
 ; Tipo PSR
 

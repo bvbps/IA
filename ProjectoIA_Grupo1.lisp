@@ -1,33 +1,36 @@
 (load "exemplos.fas")
 
-;Grupo 1
-;Daniel Amado 75629
-;Beatriz Santos 75735
-;Antonio Ferreira 75787
+;;Grupo 1
+;;Daniel Amado 75629
+;;Beatriz Santos 75735
+;;Antonio Ferreira 75787
 
-;;estrutura que define o tipo restricao
+;;Estrutura que define o tipo restricao
 (defstruct (restricao)
 		variaveis 
 		funcao-validacao)
 
 		
-;construtor que recebe uma lista das variaveis envolvidades na restricao e um predico e retorna a restricao correspondente
+;;Construtor que recebe uma lista das variaveis envolvidades na restricao e um predico e retorna a restricao correspondente
 (defun cria-restricao(lista-variaveis predicado)
 	(make-restricao :variaveis lista-variaveis :funcao-validacao predicado))
 
-	
+;;Estrutura que define o tipo psr
+;;tem uma hash-table com os pares atribuicoes
 (defstruct (psr)
 		lista-variaveis
 		lista-dominios 
 		lista-restricoes 
-		hash-atribuicoes ;;hash table com os pares atribuicoes
+		hash-atribuicoes 
 )
 
+;;Construtor que recebe uma lista de variaveis, 
+;;uma lista de dominios e uma de restricoes e devolve o psr
 (defun cria-psr (vars dominios restricoes)
-	;;(setq hashtable-atribuicoes (make-hash-table))
-	;;(dotimes (i 4) (setf (gethash i *hashtable-atribuicoes*) i))  ;;;;nao por isto a por valores ja
 	(make-psr :lista-variaveis vars :lista-dominios dominios :lista-restricoes restricoes :hash-atribuicoes (make-hash-table :test 'equal)))
 
+;;Para cada par da hash-table de atribuicoes,
+;;mete-se na lista-retornada como um par e retorna-se a lista no final com os respectivos pares
 (defun psr-atribuicoes (p)
 	(let ((lista-retornada NIL))
 		(maphash #'(lambda (key value) 
@@ -35,11 +38,14 @@
 					(psr-hash-atribuicoes p))
 		lista-retornada))
 	
-	
+;;Devolve uma lista com todas as variaveis do psr
 (defun psr-variaveis-todas (p)
 	(psr-lista-variaveis p))
-	
 
+;;Devolve uma lista com as variaveis nao atribuidas
+;;Para isso verificamos para todas as variaveis se estam dentro da 
+;hash-table de atribuicoes e caso nao estejam metemo-las numa lista 
+;;e por fim retornamos a lista
 (defun psr-variaveis-nao-atribuidas (p)
 	(let ((lista-retornada NIL))
 		(dolist (x (psr-lista-variaveis p))
@@ -49,11 +55,14 @@
 			)
 		)
 		lista-retornada))
-		
+
+;;Pedimos a hash-table o valor atribuido a variavel e devolvemos
 (defun psr-variavel-valor (p var)
 	(first (list(gethash var (psr-hash-atribuicoes p))))
 )
-	
+
+;;Verificamos em que posicao esta a variavel e depois
+;; devolvemos o dominio da lista de dominios que esta na mesma posicao que a variavel
 (defun psr-variavel-dominio (p var)
 	(let ((vars (psr-lista-variaveis p))
 			(doms (psr-lista-dominios p))
@@ -86,15 +95,18 @@
 	lista-retornada))
 
 
-	
+;;Adicionamos um par a hash-table de atribuicoes, com a variavel e o valor
 (defun psr-adiciona-atribuicao! (p var val)
 	(setf (gethash var (psr-hash-atribuicoes p)) val)
 )
 
+;;Retiramos da hash-table o par que corresponde a variavel
 (defun psr-remove-atribuicao! (p var)
 	(remhash var (psr-hash-atribuicoes p))
 )
 
+;;Vamos a lista de variaveis e verificamos em que posicao esta a variavel, depois
+;;alteramos na mesma posicao da lista de dominios o dominio para o que nos e dado
 (defun psr-altera-dominio! (p var dom)
 	(let ((vars (psr-lista-variaveis p))
 		  (i 0))
@@ -108,11 +120,15 @@
 	(setf (nth i (psr-lista-dominios p)) dom))
 )	
 
+;;Verificamos se ha variaveis nao atribuidas
+;;Caso haja, quer dizer que n e completo
 (defun psr-completo-p (p)  
 	(null (psr-variaveis-nao-atribuidas p)) 
 )
 
-(defun psr-consistente-p (p)  ;logico inteiro
+;;Verificamos as restricoes ate nos aparecer uma que nao esteja satisfeita.
+;;Caso estejam todas satisfeitas devolvemos true
+(defun psr-consistente-p (p) 
 	(let ( (i 0) 
 			(bool T)
 			(lista-restr (psr-lista-restricoes p)))
@@ -128,6 +144,8 @@
 	)
 )
 
+;;Verificamos as restricoes que dependem da var, ate encontrarmos uma que nao seja satisfeita,
+;;Caso sejam todas satisfeitas devolvemos True, que significa que a variavel e consistente
 (defun psr-variavel-consistente-p (p var)
 	(let ((listaRestr (psr-variavel-restricoes p var)) (i 0) (bool T))
 		(dotimes (el (length listaRestr))
@@ -141,6 +159,8 @@
 	)
 )	
 
+;;Atribuimos o valor a variavel e verificamos se e consistente 
+;;Antes de devolver o resultado, voltamos a deixar o valor da variavel como estava
 (defun psr-atribuicao-consistente-p (p var val)
 	(let ((oldval (psr-variavel-valor p var))
 		  (res1 NIL)
@@ -154,6 +174,9 @@
 	(values res1 res2)
 	)
 )
+
+;;Atribuimos os dois valores as variaveis e depois testamos se sao consistentes
+;;No final voltamos a atribuir os valores antigos das variaveis
 (defun psr-atribuicoes-consistentes-arco-p (p var1 val1 var2 val2)
 		(let ((oldval1 (psr-variavel-valor p var1))
 			  (oldval2 (psr-variavel-valor p var2))
@@ -180,10 +203,13 @@
 		)
 )
 
+;;Devolve o nome da variavel, dando a linha e a coluna onde pertencem
 (defun int-to-var (linha coluna)
 	(concatenate 'string (write-to-string linha) ":" (write-to-string coluna))
 )
 
+;;Calcula as variaveis adjacentes a outra variavel, 
+;;dando o numero de linhas e de colunas da matriz e o numero e a linha da variavel
 (defun calculaAdjacentes (l c nlines ncol )
 	(let ((listaAdj NIL))
 		(cond( (and (= l 0) (= c 0)) (setf listaAdj (append listaAdj ;estar no canto superior esquerdo do tabuleiro
@@ -257,6 +283,7 @@
 )
 
 
+;;Cria a funcao de verificacao que recebe todas as variaveis da restricao e o limite, que e o numero da variavel central
 (defun cria-predicado (limit vars)
 	(let ( (l limit) (v vars))	 
 		 #'(lambda (psr)

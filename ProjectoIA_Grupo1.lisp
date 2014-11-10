@@ -283,30 +283,33 @@
 )
 
 
-;;Cria a funcao de verificacao que recebe todas as variaveis da restricao e o limite, que e o numero da variavel central
+;;Cria a funcao de verificacao que recebe todas as variaveis adjacentes e o limite de 1 que podem haver, que e o numero da variavel central
+;;O predicado conta o numero de variaveis pintadas e verifica se nao excede o limite de variaveis pintadas, caso exceda devolve falso.
+;;O predicado conta o numero de variaveis brancas e verifica se nao excede o limite de variaveis brancas, caso exceda devolve falso.
+
 (defun cria-predicado (limit vars)
 	(let ( (l limit) (v vars))	 
 		 #'(lambda (psr)
-				(let ((ltmp l)
-					(NumZerosPermitidos (- 9 l))
+				(let ((bool t)
+          (NumUnsContados 0)
+					(NumZerosPermitidos (- (length v) l))
 					(NumZerosContados 0))
 					(dotimes (x (length v)) 
 						(cond ((equal (psr-variavel-valor psr (nth x v)) 1) 
-								(decf ltmp))
+								(incf NumUnsContados))
 							((equal (psr-variavel-valor psr (nth x v)) 0) 
-								(incf NumZerosContados) 
-								(cond((> NumZerosContados NumZerosPermitidos) (setf ltmp 1)(return))))
-							((null (psr-variavel-valor psr (nth x v)))
-								(setf ltmp 0)(return T))
+								(incf NumZerosContados))
 						)
+            (cond((or(> NumZerosContados NumZerosPermitidos) (> NumUnsContados l)) (setf bool nil)(return)))
 					) 
-					(= ltmp 0)
+          bool
 				)
 			)
 	)
 )
 
-
+;;Para cada variavel da lhes o dominio (0 1), e caso tenham uma condicao cria um predicado com as variaveis adjacentes e adiciona a lista de restricoes
+;;Cria o psr com os argumentos necessarios, a lista de variaveis, a lista dos dominios e a lista das restricoes
 (defun 	fill-a-pix->psr (array)	
 	(let( (restr-pred NIL) 
 			(listadj NIL) 
@@ -339,6 +342,7 @@
 
 )
 
+;;Cria um array atraves dum psr dado, metendo o dominio de cada variavel no respectivo lugar
 (defun psr->fill-a-pix (psr linhas colunas)
 		(let ((array (make-array (list linhas colunas))))
 			(dotimes (c colunas)
@@ -350,9 +354,12 @@
 		)
 )
 
+;;Chama a funcao recursiva retrocesso-simples de modo a resolver o psr
 (defun procura-retrocesso-simples (psr)
 	(retrocesso-simples psr)
 )
+
+
 (defun retrocesso-simples(p)
 	(let ((num 0)(logic NIL)(var NIL)(domvar NIL) (bool NIL)(n 0))
 		(cond ((psr-completo-p p) (values p n))

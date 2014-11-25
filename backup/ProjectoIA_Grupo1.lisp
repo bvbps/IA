@@ -33,7 +33,6 @@
 	(let (
 		(hashdominios (make-hash-table :test 'equal))
 		(hashrestricoes (make-hash-table :test 'equal))
-		(hashtemp (make-hash-table :test 'equal))
 		(vars-a-ordenar vars)
 			)
 		(dotimes (i (length vars)) 	
@@ -43,15 +42,12 @@
 		(dotimes (i (length restricoes)) 
 			(dolist (el (restricao-variaveis (nth i restricoes)))
 				(setf (gethash el hashrestricoes) (append (gethash el hashrestricoes) (list (nth i restricoes))))
-				(cond( (> (length (restricao-variaveis (nth i restricoes))) 1)
-					(incf (gethash el hashtemp 0)))
-				)
+				
 			)
 			
 		)
-		(print vars-a-ordenar)
-		(sort vars-a-ordenar #'> :key #'(lambda (var) (gethash var hashtemp 0)))
-		(print vars-a-ordenar)
+		
+		(sort vars-a-ordenar #'> :key #'(lambda (var) (length (gethash var hashrestricoes))))
 		(make-psr :lista-variaveis vars 
 				:lista-dominios dominios 
 				:lista-restricoes restricoes 
@@ -404,18 +400,6 @@
 	)
 )
 
-(defun resolve-simples (array)
-	(let ((nlinhas (first (array-dimensions array))) 
-		(ncolunas (second (array-dimensions array)))
-		(res NIL))
-		(setf res (procura-retrocesso-simples (fill-a-pix->psr array)))
-		(cond ((null res) NIL)
-			  (T (psr->fill-a-pix res nlinhas ncolunas))
-		)
-	)
-	
-)
-
 
 (defun procura-retrocesso-grau(p)
 
@@ -445,6 +429,17 @@
 )
 	
 
+(defun resolve-simples (array)
+	(let ((nlinhas (first (array-dimensions array))) 
+		(ncolunas (second (array-dimensions array)))
+		(res NIL))
+		(setf res (procura-retrocesso-simples (fill-a-pix->psr array)))
+		(cond ((null res) NIL)
+			  (T (psr->fill-a-pix res nlinhas ncolunas))
+		)
+	)
+	
+)
 
     
 ;(load "ProjectoIA_Grupo1.lisp")

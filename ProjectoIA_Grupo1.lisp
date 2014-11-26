@@ -1,4 +1,4 @@
-(load "exemplos.fas")
+;(load "exemplos.fas")
 
 ;;Grupo 1
 ;;Daniel Amado 75629
@@ -33,8 +33,6 @@
 	(let (
 		(hashdominios (make-hash-table :test 'equal))
 		(hashrestricoes (make-hash-table :test 'equal))
-		(hashtemp (make-hash-table :test 'equal))
-		(vars-a-ordenar vars)
 			)
 		(dotimes (i (length vars)) 	
 			(setf (gethash (nth i vars) hashdominios) (nth i dominios))
@@ -43,9 +41,6 @@
 		(dotimes (i (length restricoes)) 
 			(dolist (el (restricao-variaveis (nth i restricoes)))
 				(setf (gethash el hashrestricoes) (append (gethash el hashrestricoes) (list (nth i restricoes))))
-				(cond( (> (length (restricao-variaveis (nth i restricoes))) 1)
-					(incf (gethash el hashtemp 0)))
-				)
 			)
 		)
 
@@ -55,7 +50,6 @@
 				:lista-restricoes restricoes 
 				:hash-restricoes hashrestricoes 
 				:hash-dominios hashdominios 
-				:lista-variaveis-ordenadas vars-a-ordenar
 				:hash-atribuicoes (make-hash-table :test 'equal)
 		)
 	)
@@ -111,13 +105,11 @@
 
 ;;Adicionamos um par a hash-table de atribuicoes, com a variavel e o valor
 (defun psr-adiciona-atribuicao! (p var val)
-	(setf (psr-lista-variaveis-ordenadas p) (rest (psr-lista-variaveis-ordenadas p)))
 	(setf (gethash var (psr-hash-atribuicoes p)) val)
 )
 
 ;;Retiramos da hash-table o par que corresponde a variavel
 (defun psr-remove-atribuicao! (p var)
-	(setf (psr-lista-variaveis-ordenadas p) (append (list var) (psr-lista-variaveis-ordenadas p)))
 	(remhash var (psr-hash-atribuicoes p))
 )
 
@@ -430,7 +422,6 @@
 )
 
 (defun procura-retrocesso-grau(p)
-
 	(let ((num 0)(logic NIL)(var NIL)(domvar NIL) (bool NIL)(n 0))
 		(cond ((psr-completo-p p) (values p n))
 			;(T (setf var (first (psr-lista-variaveis-ordenadas p)))
@@ -456,7 +447,149 @@
 		)
 	)
 )
-	
+
+
+(defun revise (psr x y inferencias)
+  (let ((testesTotais 0)
+        (revised nil)
+        (dominio-x (gethash x inferencias))
+        (dominio-y (list (psr-variavel-valor psr y)))
+        (novo-dominio-x nil))
+        (if(null dominio-x)
+          (setf dominio-x (psr-variavel-dominio psr x))
+        )
+        (setf novo-dominio-x dominio-x)
+        
+        (cond((null dominio-y)
+                (setf dominio-y (gethash y inferencias))
+                (if(null dominio-y)
+                  (setf dominio-y (psr-variavel-dominio psr y))
+                )
+              )
+        )
+        
+        (dolist (valx dominio-x)
+          (let ((foundConsistentValue nil) (consistente nil) (testes 0))
+            (dolist (valy dominio-y)
+              (setf (values consistente testes)  (psr-atribuicoes-consistentes-arco-p psr x varx y vary))
+              (setf testesTotais (+ testesTotais testes))
+              (cond (consistente (setf foundConsistentValue T) (return)))
+            )
+            (cond ((null foundConsistentValue) (setf revised T) (setq novo-dominio-x (delete varx novo-dominio-x :test #'equal))))
+          )
+        )
+        (if revised (setf (gethash x inferencias) novo-dominio-x))
+    (values revised testesTotais)  
+  )
+)
+
+;funcao que verifica se var2 esta envolvida nalguma restricao com var1
+(defun isIn (var1 var2)
+  (let((bool nil))
+    (dolist (restricao (psr-variavel-restricoes p var1))
+      (dolist (restrvar (restricao-variaveis restricao))
+        (cond((equal restrvar var2) (setf bool T)
+          (return T)))))
+  bool
+  )
+)
+
+
+(defun arcos-vizinhos-nao-atribuidos(p var)
+  (let((lista-arcos nil) 
+      (lista-restricoes-var (psr-variavel-restricoes p var)))
+      
+  (dolist (var-natribuida (psr-variaveis-nao-atribuidas p)) 
+    (cond((not(equal var var-natribuida))
+            (if(isIn var var-natribuida)
+              (append lista-arcos (list (cons var-natribuida var)))
+            )
+          )
+    )
+  )
+  lista-arcos
+  )
+)
+
+
+(defun forward-checking(p var)
+  (let ((testesTotais 0) 
+      (inferencias (make-hash-table :test 'equal)) 
+      (lista-arcos (arcos-vizinhos-nao-atribuidos p var))
+      (revises nil)
+      (testes 0)
+      (bool T))
+      
+      (dolist (arco lista-arcos)
+        (setf (values revises testes)  (revise p (car arco) (cdr arco) inferencias))
+        (setf testesTotais (+ testesTotais testes))
+        (cond (revises (cond (= (length (gethash (car arco) inferencias)) 0)
+                              (setf bool nil) (return)
+                      ))
+        )
+      )
+    (if bool (values inferencias testesTotais)
+              (values nil testesTotais)
+    )
+  )
+)
+
+(defun mrv (p)
+  (let* ((var-n-atribuidas (psr-variaveis-nao-atribuidas p))
+      (minvalue (length (psr-variavel-dominio p (first var-n-atribuidas))))
+      (value 0)
+      (minvar (first var-n-atribuidas))
+      )
+    (dolist (var var-n-atribuidas) 
+        (setf value (length (psr-variavel-dominio p var)))
+        (cond ((< value minvalue)(setf minvar var)(setf minvalue value))
+        )
+    )
+  minvalue 
+  )
+)
+
+
+(defun procura-retrocesso-fc-mrv(p)
+    (let ((testesTotais 0) (var nil))
+      (cond( (psr-completo-p p) (values p testesTotais)
+            (T (setf var (mrv p))
+              (dolist valor (psr-variavel-dominio p var)
+                (let ((consistente nil)(testes 0)(inferencias nil))
+                  (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
+                  (setf testesTotais (+ testesTotais testes))
+                  (cond (consistente (psr-adiciona-atribuicao! p var valor) 
+                                    (setf (values inferencias testes)  (foward-checking p var valor))
+                                    (setf testesTotais (+ testesTotais testes))
+                                    (cond (inferencias ())
+                                    )
+                    )
+                  )
+                ) 
+              )
+                
+      
+      
+      )
+      
+      
+      
+      
+      
+    )
+  
+
+
+
+
+
+
+
+
+
+
+)
+
 
 
     

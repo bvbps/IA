@@ -1,4 +1,4 @@
-;(load "exemplos.fas")
+(load "exemplos.fas")
 
 ;;Grupo 1
 ;;Daniel Amado 75629
@@ -471,11 +471,11 @@
         (dolist (valx dominio-x)
           (let ((foundConsistentValue nil) (consistente nil) (testes 0))
             (dolist (valy dominio-y)
-              (setf (values consistente testes)  (psr-atribuicoes-consistentes-arco-p psr x varx y vary))
+              (setf (values consistente testes)  (psr-atribuicoes-consistentes-arco-p psr x valx y valy))
               (setf testesTotais (+ testesTotais testes))
               (cond (consistente (setf foundConsistentValue T) (return)))
             )
-            (cond ((null foundConsistentValue) (setf revised T) (setq novo-dominio-x (delete varx novo-dominio-x :test #'equal))))
+            (cond ((null foundConsistentValue) (setf revised T) (setq novo-dominio-x (remove valx novo-dominio-x :test #'equal))))
           )
         )
         (if revised (setf (gethash x inferencias) novo-dominio-x))
@@ -484,7 +484,7 @@
 )
 
 ;funcao que verifica se var2 esta envolvida nalguma restricao com var1
-(defun isIn (var1 var2)
+(defun isIn (p var1 var2)
   (let((bool nil))
     (dolist (restricao (psr-variavel-restricoes p var1))
       (dolist (restrvar (restricao-variaveis restricao))
@@ -497,18 +497,19 @@
 
 (defun arcos-vizinhos-nao-atribuidos(p var)
   (let((lista-arcos nil) 
-      (lista-restricoes-var (psr-variavel-restricoes p var)))
+      ;(lista-restricoes-var (psr-variavel-restricoes p var))
+      )
       
   (dolist (var-natribuida (psr-variaveis-nao-atribuidas p)) 
     (cond((not(equal var var-natribuida))
-            (if(isIn var var-natribuida)
+            (if(isIn p var var-natribuida)
               (append lista-arcos (list (cons var-natribuida var)))
             )
           )
     )
   )
   lista-arcos
-  )
+ )
 )
 
 
@@ -523,9 +524,11 @@
       (dolist (arco lista-arcos)
         (setf (values revises testes)  (revise p (car arco) (cdr arco) inferencias))
         (setf testesTotais (+ testesTotais testes))
-        (cond (revises (cond (= (length (gethash (car arco) inferencias)) 0)
+        (cond (revises (cond ((= (length (gethash (car arco) inferencias)) 0)
                               (setf bool nil) (return)
-                      ))
+                            )
+                      )
+              )
         )
       )
     (if bool (values inferencias testesTotais)
@@ -549,43 +552,41 @@
   )
 )
 
+(defun copia-dominios (p inferencias)
+   (maphash #'(lambda (key value) (psr-altera-dominio! p key value))  inferencias)
+)
 
 (defun procura-retrocesso-fc-mrv(p)
-    (let ((testesTotais 0) (var nil))
-      (cond( (psr-completo-p p) (values p testesTotais)
+    (let ((testesTotais 0) (var nil)(resultadoFinal nil))
+      (cond( (psr-completo-p p) (setf resultadoFinal p)
             (T (setf var (mrv p))
-              (dolist valor (psr-variavel-dominio p var)
-                (let ((consistente nil)(testes 0)(inferencias nil))
+              (dolist (valor (psr-variavel-dominio p var))
+                (let ((consistente nil)(testes 0)(inferencias nil)(resultado nil))
                   (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
                   (setf testesTotais (+ testesTotais testes))
                   (cond (consistente (psr-adiciona-atribuicao! p var valor) 
-                                    (setf (values inferencias testes)  (foward-checking p var valor))
+                                    (setf (values inferencias testes)  (forward-checking p var))
                                     (setf testesTotais (+ testesTotais testes))
-                                    (cond (inferencias ())
+                                    (cond (inferencias 
+                                          (let ((backup-dominios (psr-hash-dominios p)))
+                                          (copia-dominios p inferencias)
+                                          (setf (values resultado testes)  (procura-retrocesso-fc-mrv p))
+                                          (setf testesTotais (+ testesTotais testes))
+                                          (cond (resultado (setf resultadoFinal resultado)(return)))
+                                          (copia-dominios p backup-dominios)
+                                          )
+                                          )
                                     )
-                    )
+                                    (psr-remove-atribuicao! p var)
+                      )
                   )
                 ) 
               )
-                
-      
-      
+            )
+          )
       )
-      
-      
-      
-      
-      
-    )
-  
-
-
-
-
-
-
-
-
+  (values resultadoFinal testesTotais)
+  )
 
 
 )

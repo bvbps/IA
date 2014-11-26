@@ -1,4 +1,4 @@
-;(load "exemplos.fas")
+(load "exemplos.fas")
 
 ;;Grupo 1
 ;;Daniel Amado 75629
@@ -49,7 +49,6 @@
 			)
 		)
 
-		(sort vars-a-ordenar #'> :key #'(lambda (var) (gethash var hashtemp 0)))
     
 		(make-psr :lista-variaveis vars 
 				:lista-dominios dominios 
@@ -407,23 +406,27 @@
 )
 
 (defun heuristica-grau (p)
-  (let ((hashtemp (make-hash-table :test 'equal)))
-		(dolist (var (psr-lista-variaveis-ordenadas p)) 
-    
-      (let ((value 0))
+  (let ((maxvalue 0)(maxkey nil))
+		;(dolist (var (psr-lista-variaveis-ordenadas p)) 
+    (dolist (var (psr-variaveis-nao-atribuidas p)) 
+      (let ((value 0)(boolVarsNaoAtribuidas T))
         (dolist (restricao (psr-variavel-restricoes p var))
+          (setf boolVarsNaoAtribuidas T)
           (dolist (restrvar (restricao-variaveis restricao))
-             (if (and (not(psr-variavel-valor p restrvar)) (not(equal restrvar var))) 
-              (incf value)
-              )
+            (if (and (not(psr-variavel-valor p restrvar)) (not(equal restrvar var)) boolVarsNaoAtribuidas) ;se boolVarsNaoAtribuidas ja for nil nao queremos por a nil outra vez
+                (setf boolVarsNaoAtribuidas NIL)
+            )
           )
+          (if(null boolVarsNaoAtribuidas) (incf value))
         )
-        (setf (gethash var hashtemp) value)
+        (cond ((> value maxvalue)(setf maxkey var)(setf maxvalue value))
+              ((and (not maxkey)(= value maxvalue))(setf maxkey var))
+        )
+
       )
 		)
-  (sort (psr-lista-variaveis-ordenadas p) #'> :key #'(lambda (var) (gethash var hashtemp 0)))
-  (print (psr-lista-variaveis-ordenadas p))
-  )
+  ;(sort (psr-lista-variaveis-ordenadas p) #'> :key #'(lambda (var) (gethash var hashtemp 0)))
+  maxkey)
 )
 
 (defun procura-retrocesso-grau(p)
@@ -431,7 +434,7 @@
 	(let ((num 0)(logic NIL)(var NIL)(domvar NIL) (bool NIL)(n 0))
 		(cond ((psr-completo-p p) (values p n))
 			;(T (setf var (first (psr-lista-variaveis-ordenadas p)))
-      (T (setf var (first (heuristica-grau p)))
+      (T (setf var  (heuristica-grau p))
 				(setf domvar (psr-variavel-dominio p var))
 				(dotimes (x (length domvar))
 					(setf (values logic num) (psr-atribuicao-consistente-p p var (nth x domvar)))

@@ -47,11 +47,10 @@
 					(incf (gethash el hashtemp 0)))
 				)
 			)
-			
 		)
-		(print vars-a-ordenar)
+
 		(sort vars-a-ordenar #'> :key #'(lambda (var) (gethash var hashtemp 0)))
-		(print vars-a-ordenar)
+    
 		(make-psr :lista-variaveis vars 
 				:lista-dominios dominios 
 				:lista-restricoes restricoes 
@@ -126,16 +125,7 @@
 ;;Vamos a lista de variaveis e verificamos em que posicao esta a variavel, depois
 ;;alteramos na mesma posicao da lista de dominios o dominio para o que nos e dado
 (defun psr-altera-dominio! (p var dom)
-	(let ((vars (psr-lista-variaveis p))
-		  (i 0))
-		(dotimes (x (length vars) i)	
-			(if (equal var (nth i vars))
-				(return)
-				(incf i)
-				
-			) 
-		)
-	(setf (nth i (psr-lista-dominios p)) dom))
+  (setf (gethash var (psr-hash-dominios p)) dom)
 )	
 
 ;;Verificamos se ha variaveis nao atribuidas
@@ -416,12 +406,32 @@
 	
 )
 
+(defun heuristica-grau (p)
+  (let ((hashtemp (make-hash-table :test 'equal)))
+		(dolist (var (psr-lista-variaveis-ordenadas p)) 
+    
+      (let ((value 0))
+        (dolist (restricao (psr-variavel-restricoes p var))
+          (dolist (restrvar (restricao-variaveis restricao))
+             (if (and (not(psr-variavel-valor p restrvar)) (not(equal restrvar var))) 
+              (incf value)
+              )
+          )
+        )
+        (setf (gethash var hashtemp) value)
+      )
+		)
+  (sort (psr-lista-variaveis-ordenadas p) #'> :key #'(lambda (var) (gethash var hashtemp 0)))
+  (print (psr-lista-variaveis-ordenadas p))
+  )
+)
 
 (defun procura-retrocesso-grau(p)
 
 	(let ((num 0)(logic NIL)(var NIL)(domvar NIL) (bool NIL)(n 0))
 		(cond ((psr-completo-p p) (values p n))
-			(T (setf var (first (psr-lista-variaveis-ordenadas p)))
+			;(T (setf var (first (psr-lista-variaveis-ordenadas p)))
+      (T (setf var (first (heuristica-grau p)))
 				(setf domvar (psr-variavel-dominio p var))
 				(dotimes (x (length domvar))
 					(setf (values logic num) (psr-atribuicao-consistente-p p var (nth x domvar)))
@@ -431,7 +441,7 @@
 							(psr-adiciona-atribuicao! p var (nth x domvar))
 							;(setf (values p num) (retrocesso-simples p (+ n num)))
 
-							(setf n (+ n (+ num (multiple-value-bind (aux-psr testes-feitos) (retrocesso-simples p) (setf bool aux-psr) testes-feitos))))
+							(setf n (+ n (+ num (multiple-value-bind (aux-psr testes-feitos) (procura-retrocesso-grau p) (setf bool aux-psr) testes-feitos))))
 							(if (null bool)(psr-remove-atribuicao! p var))
 						   )
 						   (T (setf n (+ n num)))

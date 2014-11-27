@@ -1,4 +1,4 @@
-(load "exemplos.fas")
+;(load "exemplos.fas")
 
 ;;Grupo 1
 ;;Daniel Amado 75629
@@ -457,17 +457,17 @@
         (novo-dominio-x nil))
         (if(null dominio-x)
           (setf dominio-x (psr-variavel-dominio psr x))
+          
         )
         (setf novo-dominio-x dominio-x)
-        
-        (cond((null dominio-y)
+
+        (cond((null (first dominio-y))
                 (setf dominio-y (gethash y inferencias))
-                (if(null dominio-y)
-                  (setf dominio-y (psr-variavel-dominio psr y))
+                (cond ((null dominio-y)
+                  (setf dominio-y (psr-variavel-dominio psr y)) )
                 )
               )
         )
-        
         (dolist (valx dominio-x)
           (let ((foundConsistentValue nil) (consistente nil) (testes 0))
             (dolist (valy dominio-y)
@@ -475,7 +475,7 @@
               (setf testesTotais (+ testesTotais testes))
               (cond (consistente (setf foundConsistentValue T) (return)))
             )
-            (cond ((null foundConsistentValue) (setf revised T) (setq novo-dominio-x (remove valx novo-dominio-x :test #'equal))))
+            (cond ((null foundConsistentValue) (setf revised T) (setf novo-dominio-x (remove valx novo-dominio-x :test #'equal))))
           )
         )
         (if revised (setf (gethash x inferencias) novo-dominio-x))
@@ -486,10 +486,13 @@
 ;funcao que verifica se var2 esta envolvida nalguma restricao com var1
 (defun isIn (p var1 var2)
   (let((bool nil))
-    (dolist (restricao (psr-variavel-restricoes p var1))
-      (dolist (restrvar (restricao-variaveis restricao))
-        (cond((equal restrvar var2) (setf bool T)
-          (return T)))))
+    (cond ((psr-variavel-valor p var1))
+          (t (dolist (restricao (psr-variavel-restricoes p var1))
+                (dolist (restrvar (restricao-variaveis restricao))
+                  (cond((equal restrvar var2) (setf bool T)
+                    (return T)))))
+          )
+    )
   bool
   )
 )
@@ -502,12 +505,14 @@
       
   (dolist (var-natribuida (psr-variaveis-nao-atribuidas p)) 
     (cond((not(equal var var-natribuida))
-            (if(isIn p var var-natribuida)
-              (append lista-arcos (list (cons var-natribuida var)))
+            (if (isIn p var var-natribuida)
+              (setf lista-arcos (append lista-arcos (list (cons var-natribuida var))))
             )
+            
           )
     )
   )
+  
   lista-arcos
  )
 )
@@ -517,14 +522,17 @@
   (let ((testesTotais 0) 
       (inferencias (make-hash-table :test 'equal)) 
       (lista-arcos (arcos-vizinhos-nao-atribuidos p var))
-      (revises nil)
+      (revised nil)
       (testes 0)
       (bool T))
       
+
       (dolist (arco lista-arcos)
-        (setf (values revises testes)  (revise p (car arco) (cdr arco) inferencias))
+        ;(print inferencias)
+        (setf (values revised testes)  (revise p (car arco) (cdr arco) inferencias))
+      ;  (print inferencias)
         (setf testesTotais (+ testesTotais testes))
-        (cond (revises (cond ((= (length (gethash (car arco) inferencias)) 0)
+        (cond (revised (cond ((= (length (gethash (car arco) inferencias)) 0)
                               (setf bool nil) (return)
                             )
                       )
@@ -548,7 +556,7 @@
         (cond ((< value minvalue)(setf minvar var)(setf minvalue value))
         )
     )
-  minvalue 
+  minvar 
   )
 )
 
@@ -558,13 +566,13 @@
 
 (defun procura-retrocesso-fc-mrv(p)
     (let ((testesTotais 0) (var nil)(resultadoFinal nil))
-      (cond( (psr-completo-p p) (setf resultadoFinal p)
+      (cond ((psr-completo-p p) (setf resultadoFinal p))
             (T (setf var (mrv p))
               (dolist (valor (psr-variavel-dominio p var))
                 (let ((consistente nil)(testes 0)(inferencias nil)(resultado nil))
                   (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
                   (setf testesTotais (+ testesTotais testes))
-                  (cond (consistente (psr-adiciona-atribuicao! p var valor) 
+                  (cond (consistente (psr-adiciona-atribuicao! p var valor) ;(print "Add")(print var) (print valor)
                                     (setf (values inferencias testes)  (forward-checking p var))
                                     (setf testesTotais (+ testesTotais testes))
                                     (cond (inferencias 
@@ -577,13 +585,13 @@
                                           )
                                           )
                                     )
-                                    (psr-remove-atribuicao! p var)
+                                    (psr-remove-atribuicao! p var)  ;(print "Remove")(print var) (print valor)
                       )
                   )
                 ) 
               )
             )
-          )
+          
       )
   (values resultadoFinal testesTotais)
   )

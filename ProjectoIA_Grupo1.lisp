@@ -1,4 +1,4 @@
-;(load "exemplos.fas")
+(load "exemplos.fas")
 
 ;;Grupo 1
 ;;Daniel Amado 75629
@@ -486,7 +486,7 @@
 ;funcao que verifica se var2 esta envolvida nalguma restricao com var1
 (defun isIn (p var1 var2)
   (let((bool nil))
-    (cond ((psr-variavel-valor p var1))
+    (cond ((psr-variavel-valor p var2))
           (t (dolist (restricao (psr-variavel-restricoes p var1))
                 (dolist (restrvar (restricao-variaveis restricao))
                   (cond((equal restrvar var2) (setf bool T)
@@ -530,7 +530,6 @@
       (dolist (arco lista-arcos)
         ;(print inferencias)
         (setf (values revised testes)  (revise p (car arco) (cdr arco) inferencias))
-      ;  (print inferencias)
         (setf testesTotais (+ testesTotais testes))
         (cond (revised (cond ((= (length (gethash (car arco) inferencias)) 0)
                               (setf bool nil) (return)
@@ -560,12 +559,22 @@
   )
 )
 
+;copia as inferencias para o psr1
 (defun copia-dominios (p inferencias)
    (maphash #'(lambda (key value) (psr-altera-dominio! p key value))  inferencias)
 )
 
+;copia dom2 para dom1 caso n seja 0
+
+(defun backup (p inferencias)
+  (let ((backup (make-hash-table :test 'equal)))
+    (maphash #'(lambda (key value) (setf value value) (setf (gethash key backup) (psr-variavel-dominio p key)))  inferencias)
+    backup    
+  )
+)
+
 (defun procura-retrocesso-fc-mrv(p)
-    (let ((testesTotais 0) (var nil)(resultadoFinal nil))
+    (let ((testesTotais 0) (var nil)(resultadoFinal nil)(backup-dominios nil))
       (cond ((psr-completo-p p) (setf resultadoFinal p))
             (T (setf var (mrv p))
               (dolist (valor (psr-variavel-dominio p var))
@@ -576,14 +585,14 @@
                                     (setf (values inferencias testes)  (forward-checking p var))
                                     (setf testesTotais (+ testesTotais testes))
                                     (cond (inferencias 
-                                          (let ((backup-dominios (psr-hash-dominios p)))
+                                          (setf backup-dominios (backup p inferencias))
                                           (copia-dominios p inferencias)
                                           (setf (values resultado testes)  (procura-retrocesso-fc-mrv p))
                                           (setf testesTotais (+ testesTotais testes))
                                           (cond (resultado (setf resultadoFinal resultado)(return)))
                                           (copia-dominios p backup-dominios)
                                           )
-                                          )
+                                          
                                     )
                                     (psr-remove-atribuicao! p var)  ;(print "Remove")(print var) (print valor)
                       )
@@ -595,11 +604,70 @@
       )
   (values resultadoFinal testesTotais)
   )
-
-
 )
 
+(defun mac(p var)
+  (let ((testesTotais 0) 
+      (inferencias (make-hash-table :test 'equal)) 
+      (lista-arcos (arcos-vizinhos-nao-atribuidos p var))
+      (revised nil)
+      (testes 0)
+      (bool T))
+      
 
+      (dolist (arco lista-arcos)
+        (let ( (v1 (cdr arco)) (v2 (car arco)) (novos-arcos nil))
+        (setf (values revised testes)  (revise p v2 v1 inferencias))
+        (setf testesTotais (+ testesTotais testes))
+        (cond (revised (cond ((= (length (gethash v2 inferencias)) 0)
+                              (setf bool nil) (return)
+                            )
+                      )
+              (setf novos-arcos (arcos-vizinhos-nao-atribuidos p v2))
+              (setf novos-arcos (remove (cons v1 v2) novos-arcos :test #'equal))
+              (setf lista-arcos (nconc lista-arcos  novos-arcos))
+              )
+        )
+        ) 
+      )
+    (if bool (values inferencias testesTotais)
+              (values nil testesTotais)
+    )
+  )
+)
+
+(defun procura-retrocesso-mac-mrv (p)
+    (let ((testesTotais 0) (var nil)(resultadoFinal nil)(backup-dominios nil))
+      (cond ((psr-completo-p p) (setf resultadoFinal p))
+            (T (setf var (mrv p))
+              (dolist (valor (psr-variavel-dominio p var))
+                (let ((consistente nil)(testes 0)(inferencias nil)(resultado nil))
+                  (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
+                  (setf testesTotais (+ testesTotais testes))
+                  (cond (consistente (psr-adiciona-atribuicao! p var valor) ;(print "Add")(print var) (print valor)
+                                    (setf (values inferencias testes)  (mac p var))
+                                    (setf testesTotais (+ testesTotais testes))
+                                    (cond (inferencias 
+                                          (setf backup-dominios (backup p inferencias))
+                                          (copia-dominios p inferencias)
+                                          (setf (values resultado testes)  (procura-retrocesso-mac-mrv p))
+                                          (setf testesTotais (+ testesTotais testes))
+                                          (cond (resultado (setf resultadoFinal resultado)(return)))
+                                          (copia-dominios p backup-dominios)
+                                          )
+                                          
+                                    )
+                                    (psr-remove-atribuicao! p var)  ;(print "Remove")(print var) (print valor)
+                      )
+                  )
+                ) 
+              )
+            )
+          
+      )
+  (values resultadoFinal testesTotais)
+  )
+)
 
     
 ;(load "ProjectoIA_Grupo1.lisp")

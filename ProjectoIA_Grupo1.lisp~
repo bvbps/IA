@@ -1,4 +1,4 @@
-(load "exemplos.fas")
+;(load "exemplos.fas")
 
 ;;Grupo 1
 ;;Daniel Amado 75629
@@ -21,7 +21,7 @@
 		lista-variaveis
 		lista-dominios 
 		lista-restricoes 
-    hash-dominios
+		hash-dominios
 		hash-atribuicoes 
 		hash-restricoes
 )
@@ -47,8 +47,8 @@
 		(make-psr :lista-variaveis vars 
 				:lista-dominios dominios 
 				:lista-restricoes restricoes 
-        :hash-dominios hashdominios
 				:hash-restricoes hashrestricoes 
+				:hash-dominios hashdominios 
 				:hash-atribuicoes (make-hash-table :test 'equal)
 		)
 	)
@@ -203,8 +203,7 @@
 
 ;;Devolve o nome da variavel, dando a linha e a coluna onde pertencem
 (defun int-to-var (linha coluna)
-	;(concatenate 'string (write-to-string linha) ":" (write-to-string coluna))
-  (cons linha coluna)
+	(concatenate 'string (write-to-string linha) ":" (write-to-string coluna))
 )
 
 ;;Calcula as variaveis adjacentes a outra variavel, 
@@ -320,10 +319,7 @@
 			(ncolunas (second (array-dimensions array))))
 			(dotimes (c ncolunas)
 				(dotimes (l nlinhas)
-					(let ((limit (aref array l c))
-          ;(var (concatenate 'string (write-to-string l) ":" (write-to-string c)))
-          (var (cons l c))
-          )
+					(let ((limit (aref array l c))(var (concatenate 'string (write-to-string l) ":" (write-to-string c))))
 					(setf listvars (append listvars (list var)))
 					(setf listdoms (append listdoms (list dom)))
 					(setf listadj (calculaAdjacentes l c (1- nlinhas) (1- ncolunas)))
@@ -673,12 +669,10 @@
 )
 
 (defun 	fill-a-pix->psr-best (array)	
-	(let( 
-	(restr-pred NIL) 
+	(let( (restr-pred NIL) 
 	(listadj NIL)
 	(listvars NIL)
 	(listrest nil)
-  (restr nil)
 	(nlinhas (array-dimension array 0)) 
 	(ncolunas (array-dimension array 1))
 	(hash-atribuicoes (make-hash-table :test 'equal))
@@ -689,12 +683,12 @@
 	)
       
       
-	(dotimes (c ncolunas)
-	  (dotimes (l nlinhas)
-	    (let (
-	      (limit (aref array l c))
-              ;(var (concatenate 'string (write-to-string l) ":" (write-to-string c)))
-              (var (cons l c))
+			(dotimes (c ncolunas)
+				(dotimes (l nlinhas)
+					(let (
+               (limit (aref array l c))
+               
+               (var (concatenate 'string (write-to-string l) ":" (write-to-string c)))
                )
             
             (setf listvars (append listvars (list var)))
@@ -709,23 +703,25 @@
                   (cond ((= limit 9) 
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 1))
+                                (setf (gethash adj hash-atribuicoes) 1)
                             )
                         )
                         ((= limit 0) 
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 0))
+                                (setf (gethash adj hash-atribuicoes) 0)
                             )
                         )
                         ((and (= limit 6) (= limit numAdjac)) 
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 1))
-                                ;(setf (gethash adj hash-atribuicoes) 1)
+                                (setf (gethash adj hash-atribuicoes) 1)
                             )
                         )
                         ((and (= limit 4) (= limit numAdjac))
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 1))
-                                ;(setf (gethash adj hash-atribuicoes) 1)
+                                (setf (gethash adj hash-atribuicoes) 1)
                             )
                         )
                         ((null (gethash var hash-doms)) (setf (gethash var hash-doms) dom))
@@ -745,7 +741,8 @@
 				)
 			)
 			 
-			(cria-psr-best listvars listrest hash-doms hash-restricoes hash-atribuicoes)
+			(cria-psr-best listvars listrest hash-doms hash-restricoes (make-hash-table :test 'equal))
+      
 	)
 
 )
@@ -762,10 +759,6 @@
     
 )
 
-;(defun algoritmo-bia ())
-
-;(defun procura-retrocesso-toy (p array))
-
 (defun resolve-best (array)
 	(let(
       (nlinhas (first (array-dimensions array))) 
@@ -773,7 +766,7 @@
       (res NIL)
       )
       
-		(setf res (procura-retrocesso-fc-mrv (fill-a-pix->psr-best array)))
+		(setf res (procura-retrocesso-mac-mrv (fill-a-pix->psr-best array)))
 		(cond ((null res) nil)
 			  (T (psr->fill-a-pix res nlinhas ncolunas))
 		)

@@ -19,7 +19,6 @@
 ;;tem uma hash-table com os pares atribuicoes
 (defstruct (psr)
 		lista-variaveis
-		lista-dominios 
 		lista-restricoes 
     hash-dominios
 		hash-atribuicoes 
@@ -45,7 +44,6 @@
 
     
 		(make-psr :lista-variaveis vars 
-				:lista-dominios dominios 
 				:lista-restricoes restricoes 
         :hash-dominios hashdominios
 				:hash-restricoes hashrestricoes 
@@ -321,7 +319,6 @@
 			(dotimes (c ncolunas)
 				(dotimes (l nlinhas)
 					(let ((limit (aref array l c))
-          ;(var (concatenate 'string (write-to-string l) ":" (write-to-string c)))
           (var (cons l c))
           )
 					(setf listvars (append listvars (list var)))
@@ -369,11 +366,8 @@
 				(setf domvar (psr-variavel-dominio p var))
 				(dotimes (x (length domvar))
 					(setf (values logic num) (psr-atribuicao-consistente-p p var (nth x domvar)))
-					
-					;(multiple-value-bind (aux-psr testes-feitos) (psr-atribuicao-consistente-p p var (nth x domvar)) (setf logic aux-psr) testes-feitos)
 					(cond  ( logic
 							(psr-adiciona-atribuicao! p var (nth x domvar))
-							;(setf (values p num) (retrocesso-simples p (+ n num)))
 
 							(setf n (+ n (+ num (multiple-value-bind (aux-psr testes-feitos) (retrocesso-simples p) (setf bool aux-psr) testes-feitos))))
 							(if (null bool)(psr-remove-atribuicao! p var))
@@ -402,7 +396,6 @@
 
 (defun heuristica-grau (p)
   (let ((maxvalue 0)(maxkey nil))
-		;(dolist (var (psr-lista-variaveis-ordenadas p)) 
     (dolist (var (psr-variaveis-nao-atribuidas p)) 
       (let ((value 0)(boolVarsNaoAtribuidas T))
         (dolist (restricao (psr-variavel-restricoes p var))
@@ -420,23 +413,21 @@
 
       )
 		)
-  ;(sort (psr-lista-variaveis-ordenadas p) #'> :key #'(lambda (var) (gethash var hashtemp 0)))
+
   maxkey)
 )
 
 (defun procura-retrocesso-grau(p)
 	(let ((num 0)(logic NIL)(var NIL)(domvar NIL) (bool NIL)(n 0))
 		(cond ((psr-completo-p p) (values p n))
-			;(T (setf var (first (psr-lista-variaveis-ordenadas p)))
       (T (setf var  (heuristica-grau p))
 				(setf domvar (psr-variavel-dominio p var))
 				(dotimes (x (length domvar))
 					(setf (values logic num) (psr-atribuicao-consistente-p p var (nth x domvar)))
-					
-					;(multiple-value-bind (aux-psr testes-feitos) (psr-atribuicao-consistente-p p var (nth x domvar)) (setf logic aux-psr) testes-feitos)
+        
 					(cond  ( logic
 							(psr-adiciona-atribuicao! p var (nth x domvar))
-							;(setf (values p num) (retrocesso-simples p (+ n num)))
+
 
 							(setf n (+ n (+ num (multiple-value-bind (aux-psr testes-feitos) (procura-retrocesso-grau p) (setf bool aux-psr) testes-feitos))))
 							(if (null bool)(psr-remove-atribuicao! p var))
@@ -503,7 +494,6 @@
 
 (defun arcos-vizinhos-nao-atribuidos(p var)
   (let((lista-arcos nil) 
-      ;(lista-restricoes-var (psr-variavel-restricoes p var))
       )
       
   (dolist (var-natribuida (psr-variaveis-nao-atribuidas p)) 
@@ -531,7 +521,7 @@
       
 
       (dolist (arco lista-arcos)
-        ;(print inferencias)
+       
         (setf (values revised testes)  (revise p (car arco) (cdr arco) inferencias))
         (setf testesTotais (+ testesTotais testes))
         (cond (revised (cond ((= (length (gethash (car arco) inferencias)) 0)
@@ -568,7 +558,6 @@
 )
 
 ;copia dom2 para dom1 caso n seja 0
-
 (defun backup (p inferencias)
   (let ((backup (make-hash-table :test 'equal)))
     (maphash #'(lambda (key value) (setf value value) (setf (gethash key backup) (psr-variavel-dominio p key)))  inferencias)
@@ -584,7 +573,7 @@
                 (let ((consistente nil)(testes 0)(inferencias nil)(resultado nil))
                   (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
                   (setf testesTotais (+ testesTotais testes))
-                  (cond (consistente (psr-adiciona-atribuicao! p var valor) ;(print "Add")(print var) (print valor)
+                  (cond (consistente (psr-adiciona-atribuicao! p var valor) 
                                     (setf (values inferencias testes)  (forward-checking p var))
                                     (setf testesTotais (+ testesTotais testes))
                                     (cond (inferencias 
@@ -597,7 +586,7 @@
                                           )
                                           
                                     )
-                                    (psr-remove-atribuicao! p var)  ;(print "Remove")(print var) (print valor)
+                                    (psr-remove-atribuicao! p var) 
                       )
                   )
                 ) 
@@ -647,7 +636,7 @@
                 (let ((consistente nil)(testes 0)(inferencias nil)(resultado nil))
                   (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
                   (setf testesTotais (+ testesTotais testes))
-                  (cond (consistente (psr-adiciona-atribuicao! p var valor) ;(print "Add")(print var) (print valor)
+                  (cond (consistente (psr-adiciona-atribuicao! p var valor)
                                     (setf (values inferencias testes)  (mac p var))
                                     (setf testesTotais (+ testesTotais testes))
                                     (cond (inferencias 
@@ -660,7 +649,7 @@
                                           )
                                           
                                     )
-                                    (psr-remove-atribuicao! p var)  ;(print "Remove")(print var) (print valor)
+                                    (psr-remove-atribuicao! p var) 
                       )
                   )
                 ) 
@@ -683,7 +672,7 @@
 	(ncolunas (array-dimension array 1))
 	(hash-atribuicoes (make-hash-table :test 'equal))
 	(hash-restricoes (make-hash-table :test 'equal))
-	(hash-doms (make-hash-table :test 'equal)) 
+	(hash-doms (make-hash-table :test 'equal))
 	(dom (list 0 1)) 
 	(numAdjac 0)
 	)
@@ -693,19 +682,17 @@
 	  (dotimes (l nlinhas)
 	    (let (
 	      (limit (aref array l c))
-              ;(var (concatenate 'string (write-to-string l) ":" (write-to-string c)))
               (var (cons l c))
                )
             
             (setf listvars (append listvars (list var)))
-            ;(setf listdoms (append listdoms (list dom)))
+
             (setf listadj (calculaAdjacentes l c (1- nlinhas) (1- ncolunas)))
             
             
-            (cond( (not (null limit))
+            (cond((not (null limit))
                   (setf numAdjac (length listadj))
-                  
-                   ;para os dominios: (imediatos)
+                  ;para os dominios: (imediatos)
                   (cond ((= limit 9) 
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 1))
@@ -719,13 +706,13 @@
                         ((and (= limit 6) (= limit numAdjac)) 
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 1))
-                                ;(setf (gethash adj hash-atribuicoes) 1)
+                          
                             )
                         )
                         ((and (= limit 4) (= limit numAdjac))
                             (dolist (adj listadj)  
                                 (setf (gethash adj hash-doms) (list 1))
-                                ;(setf (gethash adj hash-atribuicoes) 1)
+
                             )
                         )
                         ((null (gethash var hash-doms)) (setf (gethash var hash-doms) dom))
@@ -757,14 +744,10 @@
 				:hash-restricoes hash-restricoes 
 				:hash-dominios hash-dominios 
 				:hash-atribuicoes hash-atribuicoes
-        
 		)
     
 )
 
-;(defun algoritmo-bia ())
-
-;(defun procura-retrocesso-toy (p array))
 
 (defun resolve-best (array)
 	(let(
@@ -773,12 +756,68 @@
       (res NIL)
       )
       
-		(setf res (procura-retrocesso-fc-mrv (fill-a-pix->psr-best array)))
+		(setf res (procura-retrocesso-fc-mrv-grau (fill-a-pix->psr-best array)))
 		(cond ((null res) nil)
 			  (T (psr->fill-a-pix res nlinhas ncolunas))
 		)
 	)
 )
+
+(defun procura-retrocesso-fc-mrv-grau(p)
+    (let ((testesTotais 0) (var nil)(resultadoFinal nil)(backup-dominios nil))
+      (cond ((psr-completo-p p) (setf resultadoFinal p))
+            (T (setf var (mrv-grau p))
+              (dolist (valor (psr-variavel-dominio p var))
+                (let ((consistente nil)(testes 0)(inferencias nil)(resultado nil))
+                  (setf (values consistente testes)  (psr-atribuicao-consistente-p p var valor))
+                  (setf testesTotais (+ testesTotais testes))
+                  (cond (consistente (psr-adiciona-atribuicao! p var valor) 
+                                    (setf (values inferencias testes)  (forward-checking p var))
+                                    (setf testesTotais (+ testesTotais testes))
+                                    (cond (inferencias 
+                                          (setf backup-dominios (backup p inferencias))
+                                          (copia-dominios p inferencias)
+                                          (setf (values resultado testes)  (procura-retrocesso-fc-mrv p))
+                                          (setf testesTotais (+ testesTotais testes))
+                                          (cond (resultado (setf resultadoFinal resultado)(return)))
+                                          (copia-dominios p backup-dominios)
+                                          )
+                                          
+                                    )
+                                    (psr-remove-atribuicao! p var) 
+                      )
+                  )
+                ) 
+              )
+            )
+          
+      )
+  (values resultadoFinal testesTotais)
+  )
+)
+
+(defun mrv-grau (p)
+    (let* (
+      (var-n-atribuidas (psr-variaveis-nao-atribuidas p))
+      (minvalue (length (psr-variavel-dominio p (first var-n-atribuidas))))
+      (value 0)
+      (minvar (first var-n-atribuidas))
+      )
+    (dolist (var var-n-atribuidas) 
+        (setf value (length (psr-variavel-dominio p var)))
+        (cond ((< value minvalue)
+                (setf minvar var)
+                (setf minvalue value))
+        )
+    )
+    (cond ((= minvalue 2)
+            (setf minvar (heuristica-grau p))
+          )
+    )
+  minvar 
+  )
+)
+
 ;(load "ProjectoIA_Grupo1.lisp")
 ;(setf p1 (cria-psr '(A B C X Y Z) '('(0 1) '(2 3) '(4 5) '(6 7) '(8 9) '(1 4)) NIL))
 
